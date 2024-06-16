@@ -1,0 +1,63 @@
+name: publish GH page
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: version to be published
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  publish-autodoc:
+    name: publish autodoc
+    uses: ./.github/workflows/publish-autodoc-call.yml
+    secrets: inherit
+    with:
+      version: ${{ github.event.inputs.version }}
+
+  publish-openapi:
+    name: publish openapi
+    uses: ./.github/workflows/publish-openapi-ui-call.yml
+    secrets: inherit
+    with:
+      version: ${{ github.event.inputs.version }}
+
+  prepare-deployment:
+    needs: ["publish-autodoc", "publish-openapi"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: _site/autodoc
+          pattern: "autodoc"
+      - uses: actions/download-artifact@v4
+        with:
+          path: _site/openapi
+          pattern: "*-api"
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  # Deployment job
+  deploy-pages:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: prepare-deployment
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
