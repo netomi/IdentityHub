@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: _site/autodoc
+          path: _site
           pattern: "autodoc"
       - uses: actions/download-artifact@v4
         with:
